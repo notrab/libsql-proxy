@@ -4,12 +4,39 @@ import { createClient } from "@libsql/client";
 const app = express();
 app.use(express.json());
 
+const syncInterval = parseInt(process.env.TURSO_SYNC_INTERVAL, 10) || 60;
+
 const client = createClient({
   url: "file:/app/data/local.db",
-  syncUrl: process.env.PRIMARY_URL,
-  authToken: process.env.AUTH_TOKEN,
-  syncInterval: 60, // Sync every 60 seconds
+  syncUrl: process.env.TURSO_DATABASE_URL,
+  authToken: process.env.TURSO_AUTH_TOKEN,
+  syncInterval,
 });
+
+// Move to jose for proper JWT validation
+function verifyClientAuth(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith("Bearer ")) {
+    return res.status(401).json({
+      error: {
+        message: "Missing Authorization header",
+        code: "UNAUTHORIZED",
+      },
+    });
+  }
+
+  const clientToken = authHeader.slice(7);
+  if (clientToken !== process.env.PROXY_AUTH_TOKEN) {
+    return res.status(401).json({
+      error: {
+        message: "Invalid authorization token",
+        code: "UNAUTHORIZED",
+      },
+    });
+  }
+
+  next();
+}
 
 function formatValue(value) {
   if (value === null) {
@@ -26,7 +53,7 @@ function formatValue(value) {
   return { type: "text", value: value.toString() };
 }
 
-app.post("/v2/pipeline", async (req, res) => {
+app.post("/v2/pipeline", verifyClientAuth, async (req, res) => {
   try {
     const { requests } = req.body;
     let results = [];
@@ -103,8 +130,10 @@ app.get("/version", (req, res) => {
 });
 
 const port = process.env.PORT || 3000;
+
 app.listen(port, () => {
   console.log(`LibSQL proxy server running on port ${port}`);
   console.log(`Region: ${process.env.FLY_REGION}`);
+  console.log(`Sync Internal: ${syncInterval}`);
   console.log(`Database path: /app/data/local.db`);
 });
