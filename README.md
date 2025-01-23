@@ -1,6 +1,8 @@
-# libsql-proxy
+# Turso CDN
 
-This guide will help you set up a multi-region proxy for serverless libSQL/Turso with local replicas in each region. The proxy uses local SQLite files that sync with your primary database, providing lower latency for reads in each region.
+This guide will help you self host a multi-region write-through cache proxy for serverless SQLite with [Turso](https://turso.tech).
+
+Turso CDN provides similar guarantees to Turso's (deprecated) Edge Replicas.
 
 ## How It Works
 
@@ -18,8 +20,8 @@ This guide will help you set up a multi-region proxy for serverless libSQL/Turso
 1. Clone the repository
 
 ```bash
-git clone https://github.com/notrab/libsql-proxy
-cd libsql-proxy
+git clone https://github.com/notrab/turso-cdn
+cd turso-cdn
 ```
 
 2. Create a Fly app:
@@ -80,7 +82,7 @@ Update your client applications to use the proxy:
 import { createClient } from "@libsql/client/web";
 
 const client = createClient({
-  url: "https://your-proxy-app.fly.dev",
+  url: "https://your-cdn.fly.dev",
   authToken: process.env.PROXY_AUTH_TOKEN,
 });
 
@@ -114,7 +116,7 @@ ls -l /app/data/local.db
 Test latency from different regions by passing the `fly-prefer-region` header:
 
 ```bash
-curl -s -X POST https://your-proxy-app.fly.dev/v2/pipeline \
+curl -s -X POST https://your-cdn.fly.dev/v2/pipeline \
   -w "\nTotal time: %{time_total}s\n" \
   -H "fly-prefer-region: sin" \
   -H "Authorization: Bearer your-proxy-auth-secret" \
