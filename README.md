@@ -68,7 +68,7 @@ fly scale count 3 --region lhr,sin,bos
 fly status
 ```
 
-## Using the Proxy
+## Using the CDN
 
 Update your client applications to use the proxy:
 
@@ -88,6 +88,47 @@ const client = createClient({
 
 // The client will automatically connect to the nearest region
 const result = await client.execute("SELECT 1");
+```
+
+### Adding Edge Replicas
+
+To expand to new regions:
+
+1. Create a volume in the new region:
+
+```bash
+fly volumes create libsql_data --size 10 --region new-region
+```
+
+2. Scale the application:
+
+```bash
+fly scale count 4 --region lhr,sin,bos,new-region
+```
+
+### Removing Edge Replicas
+
+1. Scale down the regions:
+
+```bash
+# Scale down to just one instance in the primary region
+fly scale count 1
+
+# Or keep multiple regions but reduce count
+fly scale count 1 --region lhr,sin
+
+# Remove a specific region entirely while keeping others
+fly scale count 0 --region sin
+```
+
+2. Remove the volumes not longer used:
+
+```bash
+# List volumes first to see what exists
+fly volumes list
+
+# Remove volume in a specific region
+fly volumes destroy libsql_data --region sin
 ```
 
 ## Monitoring, Troubleshooting and Configuration
@@ -133,19 +174,3 @@ fly secrets set TURSO_SYNC_INTERVAL=30 # 30 seconds
 ```
 
 If not set, the value defaults to `60` seconds.
-
-### Adding More Regions
-
-To expand to new regions:
-
-1. Create a volume in the new region:
-
-```bash
-fly volumes create libsql_data --size 10 --region new-region
-```
-
-2. Scale the application:
-
-```bash
-fly scale count 4 --region lhr,sin,bos,new-region
-```
