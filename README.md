@@ -10,6 +10,23 @@ Turso CDN provides similar guarantees to Turso's (deprecated) Edge Replicas.
 2. **Local Replicas**: Each region maintains a local SQLite file that syncs with the primary database.
 3. **Sync Interval**: The local replicas sync every 60 seconds (configurable) with the primary database.
 
+```txt
+Client (Asia)     Client (US)    Client (EU)
+     |               |              |
+     v               v              v
+[Fly Anycast IP - Global Load Balancing]
+     |               |              |
+     v               v              v
+[sin proxy]     [bos proxy]    [lhr proxy]     # Each has local SQLite replica
+     |               |              |
+     \               |              /
+      \              |             /
+       \             |            /
+        \            v           /
+         `----> [Turso/LibSQL] <´          # Primary database
+                Sync every 60s
+```
+
 ## Prerequisites
 
 - Fly.io account and [`flyctl`](https://fly.io/docs/flyctl/install/) installed
